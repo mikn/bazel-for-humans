@@ -1,0 +1,25 @@
+# Build configuration
+[build]
+command = "npm run docs:build"
+publish = "docs/.vitepress/dist"
+node_version = "20"
+
+# Environment variables
+[build.environment]
+NODE_VERSION = "20"
+
+# Headers and redirects are handled by the _headers and _redirects files in /public
+
+# Build preview deployment settings
+[build.preview]
+command = "npm run docs:build"
+
+# Production branch settings
+[build.production]
+command = "npm run docs:build"
+
+# Enable SPA routing
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

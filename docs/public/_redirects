@@ -1,0 +1,5 @@
+# Redirect default Netlify subdomain to primary domain
+/* /:splat 200
+
+# Handle 404s
+/* /404.html 404
