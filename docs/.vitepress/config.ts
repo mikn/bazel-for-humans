@@ -36,6 +36,14 @@ export default defineConfig({
           ]
         }
       ],
+      '/examples/': [
+        {
+          text: 'Examples',
+          items: [
+            { text: 'Basic Build', link: '/examples/basic-build' },
+          ]
+        }
+      ],
       '/reference/': [
         {
           text: 'Reference',
@@ -43,16 +51,6 @@ export default defineConfig({
             { text: 'Core Concepts', link: '/reference/concepts' },
             { text: 'Command Reference', link: '/reference/commands' },
             { text: 'Configuration', link: '/reference/configuration' },
-          ]
-        }
-      ],
-      '/examples/': [
-        {
-          text: 'Examples',
-          items: [
-            { text: 'Basic Build', link: '/examples/basic-build' },
-            { text: 'Multiple Languages', link: '/examples/multiple-languages' },
-            { text: 'Testing', link: '/examples/testing' },
           ]
         }
       ]
@@ -68,7 +66,7 @@ export default defineConfig({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright © 2023-present'
+      copyright: 'Copyright 2023-present'
     }
   },
 
