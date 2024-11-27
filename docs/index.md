@@ -9,7 +9,7 @@ hero:
   actions:
     - theme: brand
       text: Start Learning
-      link: /guide/quick-start
+      link: /getting-started/
     - theme: alt
       text: View on GitHub
       link: https://github.com/your-username/bazel-for-humans
@@ -85,6 +85,6 @@ Ready to make Bazel work for you? Start with these core concepts:
 - [Dependencies and Actions](/concepts/dependencies-and-actions.html): Control your build process
 - [Unified Environment](/concepts/unified-environment.html): Connect all the pieces
 
-Or jump straight to our [Quick Start Guide](/guide/quick-start.html) if you're eager to get your hands dirty.
+Or jump straight to our [Getting Started Guide](/getting-started/) if you're eager to get your hands dirty.
 
 Remember: Bazel is a tool meant to serve you, not the other way around. Let's make it work for humans.

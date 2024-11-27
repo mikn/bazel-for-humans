@@ -1,6 +1,6 @@
 # Basic Build Example
 
-This example demonstrates a simple Bazel build setup with multiple languages and test targets.
+This example demonstrates a simple Bazel build setup with multiple languages and test targets. For more information about build configuration, see our [Getting Started guide](/getting-started/).
 
 ## Project Structure
 
@@ -194,6 +194,6 @@ calculator_test (//tests:calculator_test)
 
 ## Next Steps
 
-- Learn about [dependencies](/guide/dependencies)
-- Explore more complex [BUILD files](/guide/build-files)
-- Understand [workspaces](/guide/workspaces) in detail
+- Learn about [dependencies](/getting-started/dependencies)
+- Explore more complex [BUILD files](/getting-started/build-files)
+- Understand [workspaces](/getting-started/workspaces) in detail

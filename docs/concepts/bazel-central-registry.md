@@ -2,6 +2,8 @@
 
 The Bazel Central Registry (BCR) is the official, centralized repository of Bazel modules that serves as the default registry for Bzlmod. It provides a curated, secure source of commonly used build rules and dependencies with version compatibility guarantees.
 
+For more information about dependency management, see our [Getting Started guide](/getting-started/).
+
 ## What is the Bazel Central Registry?
 
 The BCR is:
@@ -349,6 +351,6 @@ Always maintain a rollback plan when making significant changes to your dependen
 ## Next Steps
 
 1. Explore the [BCR GitHub repository](https://github.com/bazelbuild/bazel-central-registry)
-2. Review [Bzlmod documentation](/concepts/bzlmod)
+2. Review [Bzlmod documentation](/getting-started/)
 3. Learn about [Remote Repositories](/concepts/remote-repositories)
 4. Understand [Version Resolution](/concepts/version-resolution)

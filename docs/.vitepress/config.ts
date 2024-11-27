@@ -25,8 +25,9 @@ export default withMermaid({
           text: 'Getting Started',
           items: [
             { text: 'Introduction', link: '/getting-started/' },
-            { text: 'Build Rules', link: '/getting-started/build-rules' },
-            { text: 'Module Dependencies', link: '/getting-started/module-dependencies' },
+            { text: 'Dependencies', link: '/getting-started/dependencies' },
+            { text: 'Build Files', link: '/getting-started/build-files' },
+            { text: 'Workspaces', link: '/getting-started/workspaces' }
           ]
         }
       ],
@@ -35,20 +36,12 @@ export default withMermaid({
           text: 'Core Concepts',
           items: [
             { text: 'Modern Bazel Overview', link: '/concepts/core-concepts' },
-            { text: 'Labels and Targets', link: '/concepts/labels-and-targets' },
-            { text: 'Packages and Visibility', link: '/concepts/packages-and-visibility' },
-            { text: 'Dependencies and Actions', link: '/concepts/dependencies-and-actions' },
             { text: 'Build vs Runtime', link: '/concepts/build-vs-runtime' },
-            { text: 'Bazel Central Registry', link: '/concepts/bazel-central-registry' },
-          ]
-        },
-        {
-          text: 'Advanced Concepts',
-          items: [
+            { text: 'Dependencies and Actions', link: '/concepts/dependencies-and-actions' },
             { text: 'Unified Environment', link: '/concepts/unified-environment' },
-            { text: 'Providers and Aspects', link: '/concepts/providers-and-aspects' },
-            { text: 'Rules and Evaluation', link: '/concepts/rules-and-evaluation' },
-            { text: 'Remote Execution', link: '/concepts/remote-execution' },
+            { text: 'Bazel Central Registry', link: '/concepts/bazel-central-registry' },
+            { text: 'Remote Repositories', link: '/concepts/remote-repositories' },
+            { text: 'Version Resolution', link: '/concepts/version-resolution' }
           ]
         }
       ],
