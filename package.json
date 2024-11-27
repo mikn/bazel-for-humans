@@ -18,10 +18,12 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "vitepress": "^1.0.0-rc.31",
-    "vue": "^3.3.8",
     "@types/node": "^20.10.0",
-    "typescript": "^5.3.2"
+    "mermaid": "^11.4.1",
+    "typescript": "^5.3.2",
+    "vitepress": "^1.0.0-rc.31",
+    "vitepress-plugin-mermaid": "^2.0.17",
+    "vue": "^3.3.8"
   },
   "volta": {
     "node": "20.10.0"

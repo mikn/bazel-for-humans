@@ -1,6 +1,7 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from "vitepress-plugin-mermaid";
 
-export default defineConfig({
+export default withMermaid({
   title: "Bazel for Humans",
   description: "Making Bazel accessible and practical for everyone",
   
@@ -12,27 +13,51 @@ export default defineConfig({
     logo: '/logo.png',
     nav: [
       { text: 'Home', link: '/' },
-      { text: 'Guide', link: '/guide/getting-started' },
-      { text: 'Reference', link: '/reference/concepts' },
+      { text: 'Getting Started', link: '/getting-started/' },
+      { text: 'Concepts', link: '/concepts/core-concepts' },
+      { text: 'Best Practices', link: '/best-practices/dependency-management' },
       { text: 'Examples', link: '/examples/basic-build' },
     ],
 
     sidebar: {
-      '/guide/': [
+      '/getting-started/': [
         {
-          text: 'Introduction',
+          text: 'Getting Started',
           items: [
-            { text: 'Getting Started', link: '/guide/getting-started' },
-            { text: 'Installation', link: '/guide/installation' },
-            { text: 'Basic Concepts', link: '/guide/basic-concepts' },
+            { text: 'Introduction', link: '/getting-started/' },
+            { text: 'Build Rules', link: '/getting-started/build-rules' },
+            { text: 'Module Dependencies', link: '/getting-started/module-dependencies' },
           ]
-        },
+        }
+      ],
+      '/concepts/': [
         {
           text: 'Core Concepts',
           items: [
-            { text: 'Workspaces', link: '/guide/workspaces' },
-            { text: 'BUILD Files', link: '/guide/build-files' },
-            { text: 'Dependencies', link: '/guide/dependencies' },
+            { text: 'Modern Bazel Overview', link: '/concepts/core-concepts' },
+            { text: 'Labels and Targets', link: '/concepts/labels-and-targets' },
+            { text: 'Packages and Visibility', link: '/concepts/packages-and-visibility' },
+            { text: 'Dependencies and Actions', link: '/concepts/dependencies-and-actions' },
+            { text: 'Build vs Runtime', link: '/concepts/build-vs-runtime' },
+            { text: 'Bazel Central Registry', link: '/concepts/bazel-central-registry' },
+          ]
+        },
+        {
+          text: 'Advanced Concepts',
+          items: [
+            { text: 'Unified Environment', link: '/concepts/unified-environment' },
+            { text: 'Providers and Aspects', link: '/concepts/providers-and-aspects' },
+            { text: 'Rules and Evaluation', link: '/concepts/rules-and-evaluation' },
+            { text: 'Remote Execution', link: '/concepts/remote-execution' },
+          ]
+        }
+      ],
+      '/best-practices/': [
+        {
+          text: 'Best Practices',
+          items: [
+            { text: 'Dependency Management', link: '/best-practices/dependency-management' },
+            { text: 'Build Performance', link: '/best-practices/build-performance' },
           ]
         }
       ],
@@ -41,16 +66,8 @@ export default defineConfig({
           text: 'Examples',
           items: [
             { text: 'Basic Build', link: '/examples/basic-build' },
-          ]
-        }
-      ],
-      '/reference/': [
-        {
-          text: 'Reference',
-          items: [
-            { text: 'Core Concepts', link: '/reference/concepts' },
-            { text: 'Command Reference', link: '/reference/commands' },
-            { text: 'Configuration', link: '/reference/configuration' },
+            { text: 'Multi-language Project', link: '/examples/multi-language' },
+            { text: 'External Dependencies', link: '/examples/external-dependencies' },
           ]
         }
       ]
@@ -72,7 +89,6 @@ export default defineConfig({
 
   markdown: {
     lineNumbers: true,
-    // Configure Shiki for syntax highlighting
     theme: {
       light: 'github-light',
       dark: 'github-dark'
@@ -83,12 +99,21 @@ export default defineConfig({
       'javascript',
       'typescript',
       'json',
-      {
-        id: 'bazel',
-        scopeName: 'source.python',
-        path: 'python',
-        aliases: ['bzl', 'BUILD']
-      }
+      'go',
+      'protobuf'
     ]
-  }
+  },
+
+  mermaid: {
+    // Mermaid configuration options
+    theme: 'default',
+    darkMode: true,
+    themeVariables: {
+      lineColor: '#999',
+      textColor: '#333',
+    }
+  },
+  mermaidPlugin: {
+    class: "mermaid-diagram", // Additional CSS class for styling
+  },
 })
