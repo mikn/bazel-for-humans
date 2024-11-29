@@ -280,6 +280,8 @@ go_test(
 
 ## Next Steps
 
-1. Learn about [Build Performance](build-performance.md)
+1. Learn about [Performance Best Practices](https://bazel.build/configure/best-practices)
 2. Study [Container Images](/examples/container-images)
 3. Explore [Cross Platform Builds](/examples/cross-platform) 
+
+For more information about optimizing builds, see [Performance Best Practices](https://bazel.build/configure/best-practices). 

@@ -327,6 +327,6 @@ go_library(
 
 ## Next Steps
 
-1. Learn about [Dependency Management](dependency-management.md)
-2. Study [Build Performance](build-performance.md)
+1. Learn about [Dependencies](../getting-started/dependencies.md)
+2. Study [Performance Best Practices](https://bazel.build/configure/best-practices)
 3. Explore [Testing and CI/CD](testing-and-ci.md) 

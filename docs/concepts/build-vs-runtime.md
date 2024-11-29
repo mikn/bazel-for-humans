@@ -263,13 +263,13 @@ ERROR: undefined symbol 'CONFIG_VALUE'
 ## Related Documentation
 
 - [Dependencies and Actions](dependencies-and-actions.md)
-- [Unified Environment](unified-environment.md)
+- [Hermetic Environment](hermetic-environment.md)
 - [Official Bazel Dependencies Documentation](https://bazel.build/concepts/dependencies)
 - [Official Bazel Runtime Documentation](https://bazel.build/extending/rules#runfiles)
 
 ## Next Steps
 
-- Learn about [Unified Environment](unified-environment.md) to understand how Bazel manages build and runtime environments
+- Learn about [Hermetic Environment](hermetic-environment.md) to understand how Bazel manages build and runtime environments
 - Explore [Remote Execution](remote-execution.md) to see how build and runtime environments are handled in distributed builds
 - Study [Dependencies and Actions](dependencies-and-actions.md) to better understand the build process
 - Read about [Toolchain Resolution](https://bazel.build/concepts/toolchains) to learn how Bazel manages build tools

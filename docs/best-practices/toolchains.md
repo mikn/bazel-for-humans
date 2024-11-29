@@ -309,6 +309,6 @@ bazel_dep(
 
 ## Next Steps
 
-1. Learn about [Build Performance](build-performance.md)
+1. Learn about [Performance Best Practices](https://bazel.build/configure/best-practices)
 2. Study [Cross Platform Builds](/examples/cross-platform)
 3. Explore [Container Images](/examples/container-images) 

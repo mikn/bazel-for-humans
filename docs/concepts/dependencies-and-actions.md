@@ -285,7 +285,6 @@ cc_binary(
 
 ## Next Steps
 
-- Learn about [Build vs Runtime](build-vs-runtime.md) to understand different dependency phases
+- Learn about [Hermetic Environment](hermetic-environment.md) to understand how Bazel ensures reproducible actions
 - Explore [Remote Execution](remote-execution.md) to see how actions can be distributed
 - Study [Rules and Evaluation](rules-and-evaluation.md) to create custom rules and actions
-- Read about [Unified Environment](unified-environment.md) to understand how Bazel ensures reproducible actions

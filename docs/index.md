@@ -83,7 +83,7 @@ Ready to make Bazel work for you? Start with these core concepts:
 - [Core Concepts](/concepts/core-concepts.html): Understand the building blocks
 - [Build vs Runtime](/concepts/build-vs-runtime.html): Master the key distinction
 - [Dependencies and Actions](/concepts/dependencies-and-actions.html): Control your build process
-- [Unified Environment](/concepts/unified-environment.html): Connect all the pieces
+- [Hermetic Environment](/concepts/hermetic-environment.html): Connect all the pieces
 
 Or jump straight to our [Getting Started Guide](/getting-started/) if you're eager to get your hands dirty.
 

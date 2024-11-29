@@ -33,7 +33,7 @@ This section explains the core concepts and principles behind Bazel. Understandi
 
 ## Environment and Execution
 
-6. [Unified Environment](unified-environment.md)
+6. [Hermetic Environment](hermetic-environment.md)
    - Hermetic builds
    - Toolchain management
    - Platform configuration

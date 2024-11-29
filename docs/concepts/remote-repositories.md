@@ -166,12 +166,10 @@ ERROR: patch command failed
 
 - [Module Dependencies](../getting-started/module-dependencies.md)
 - [Bazel Central Registry](bazel-central-registry.md)
-- [Version Resolution](version-resolution.md)
 - [Official Remote Repository Documentation](https://bazel.build/external/overview)
 
 ## Next Steps
 
-- Learn about [Version Resolution](version-resolution.md) to understand how Bazel handles dependency versions
 - Explore [Bazel Central Registry](bazel-central-registry.md) for a modern approach to dependencies
 - Study [Module Dependencies](../getting-started/module-dependencies.md) to use Bzlmod effectively
 - Read about [Dependencies](../getting-started/dependencies.md) for general dependency management

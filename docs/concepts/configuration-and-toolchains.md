@@ -168,7 +168,6 @@ ERROR: no matching toolchain found
 
 ## Next Steps
 
-- Learn about [Remote Execution](remote-execution.md) to understand distributed builds
+- Learn about [Hermetic Environment](hermetic-environment.md) to understand how Bazel manages environments
 - Explore [Rules and Evaluation](rules-and-evaluation.md) to create custom rules
 - Study [Dependencies and Actions](dependencies-and-actions.md) to understand the build process
-- Read about [Unified Environment](unified-environment.md) for reproducible builds 
