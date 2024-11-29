@@ -1,330 +1,291 @@
-# Dependencies and Actions in Modern Bazel
+# Dependencies and Actions
 
-This guide explains how Bazel manages dependencies and executes actions in your build system.
+This guide explains how Bazel handles dependencies between targets and turns them into concrete build steps (actions). Think of dependencies as a recipe's ingredients list, and actions as the cooking instructions.
 
 ## Understanding Dependencies
 
-Dependencies in Bazel come in several forms, each serving a specific purpose in your build system.
-
 ### Types of Dependencies
 
-#### 1. Module Dependencies
-Module dependencies are declared in your `MODULE.bazel` file and represent high-level dependencies on other Bazel modules.
+Bazel has several types of dependencies:
+
+1. **Build Dependencies (`deps`)**
+   - Code needed at compile time
+   - Libraries your code links against
+   - Headers and source files needed to build
 
 ```python
-module(
-    name = "my_app",
-    version = "1.0",
-)
-
-bazel_dep(name = "rules_python", version = "0.24.0")
-bazel_dep(name = "rules_go", version = "0.41.0")
-
-# Development dependencies are only used during development
-dev_dependency(name = "buildifier", version = "6.3.3")
-```
-
-::: tip
-Always use explicit versions for dependencies to ensure reproducible builds. The Bazel Central Registry provides a curated list of trusted dependencies.
-:::
-
-#### 2. Target Dependencies
-Target dependencies are specified in your `BUILD.bazel` files and define relationships between build targets.
-
-```python
-cc_binary(
-    name = "app",
-    srcs = ["main.cc"],
+cc_library(
+    name = "hello_lib",
+    srcs = ["hello.cc"],
+    hdrs = ["hello.h"],
     deps = [
-        ":lib",                    # Local dependency in same package
-        "//common:utils",          # Cross-package dependency
-        "@boost//:filesystem",     # External dependency from module
+        "//common:base",          # Another library we need
+        "@boost//:filesystem",    # External dependency
     ],
 )
 ```
 
-::: warning
-Avoid creating deep dependency chains. Flat dependency structures are easier to maintain and debug.
-:::
-
-#### 3. Runtime Dependencies
-Runtime dependencies (data dependencies) are files or resources needed during program execution.
+2. **Runtime Dependencies (`data`)**
+   - Files needed when the program runs
+   - Configuration files
+   - Resource files
 
 ```python
-py_binary(
+cc_binary(
     name = "server",
-    srcs = ["server.py"],
-    deps = [":lib"],              # Build-time dependency
+    srcs = ["server.cc"],
+    deps = [":server_lib"],
     data = [
-        "config.json",            # Runtime configuration
-        "//resources:assets",     # Runtime resources
-        "@some_module//:runtime", # External runtime dependency
+        "//config:settings.json",  # Config file
+        "//resources:images",      # Resource directory
     ],
 )
 ```
 
-## Action System
-
-The action system is how Bazel turns your build rules into concrete build steps.
-
-### 1. Action Definition
-Actions define how inputs are transformed into outputs.
+3. **Tool Dependencies**
+   - Programs needed during the build
+   - Code generators
+   - Compilers and toolchains
 
 ```python
-def _custom_compile_impl(ctx):
-    output = ctx.actions.declare_file(ctx.label.name + ".out")
-    
-    # Define the action that will create the output
-    ctx.actions.run(
-        outputs = [output],
-        inputs = ctx.files.srcs,
-        executable = ctx.executable.compiler,
-        arguments = [
-            "--output=" + output.path,
-            "--optimization=" + ctx.attr.opt_level,
-        ] + [f.path for f in ctx.files.srcs],
-        env = {
-            "LANG": "en_US.UTF-8",
-            "PATH": "/bin:/usr/bin",
-        },
-        mnemonic = "CustomCompile",
-        progress_message = "Compiling %{label} with optimization level %{opt_level}",
-    )
-    
-    return [DefaultInfo(files = depset([output]))]
-```
-
-### 2. Action Execution
-Bazel executes actions in parallel when possible, respecting the dependency graph.
-
-```python
-# These libraries can be built in parallel
-cc_library(
-    name = "lib1",
-    srcs = ["a.cc", "b.cc"],
-)
-
-cc_library(
-    name = "lib2",
-    srcs = ["x.cc", "y.cc"],
-)
-
-# This target depends on both libraries and will wait for them
-cc_binary(
-    name = "app",
-    srcs = ["main.cc"],
-    deps = [
-        ":lib1",
-        ":lib2",
-    ],
+genrule(
+    name = "generate_code",
+    srcs = ["input.proto"],
+    outs = ["generated.pb.cc"],
+    tools = ["//tools:protoc"],    # Tool needed for generation
+    cmd = "$(location //tools:protoc) $(SRCS) > $(OUTS)",
 )
 ```
 
-### 3. Action Caching
-Bazel's caching system ensures that actions are only re-run when necessary.
+### Dependency Graph
 
+Bazel builds a graph of all dependencies:
 ```python
-# Action cache key includes:
-# - Input file contents (cryptographic hashes)
-# - Command line arguments
-# - Environment variables
-# - System properties
-# - Toolchain configuration
-
-py_library(
-    name = "lib",
-    srcs = ["lib.py"],
-    deps = ["//common:base"],
-)
+# This dependency graph:
+//main:binary
+  |-- //lib:helper_lib
+  |   |-- //lib:utils
+  |   |-- @boost//:filesystem
+  |-- //tools:code_gen
+      |-- //tools:compiler
 ```
 
-::: tip
-To maximize cache hits:
-- Use hermetic toolchains
-- Avoid timestamps in outputs
-- Minimize environment dependencies
-:::
+## Understanding Actions
 
-## Dependency Management
+### What are Actions?
 
-### 1. Direct vs Transitive Dependencies
+Actions are the specific steps Bazel takes to build your targets. Each action:
+- Has defined inputs and outputs
+- Runs a specific command
+- Is hermetic (reproducible)
+- Can be cached
 
+### Action Examples
+
+1. **Compilation Action**
 ```python
-cc_library(
-    name = "app",
-    srcs = ["app.cc"],
-    deps = [":lib"],          # Direct dependency
-    tags = ["requires-lib"],  # Metadata for dependency
-)
-
+# This cc_library creates actions to:
 cc_library(
     name = "lib",
     srcs = ["lib.cc"],
-    deps = [":core"],         # Transitive to "app"
-    tags = ["requires-core"], # Metadata for dependency
+    hdrs = ["lib.h"],
 )
-
-cc_library(
-    name = "core",
-    srcs = ["core.cc"],
-)
+# 1. Compile lib.cc to lib.o
+# 2. Create lib.a archive
 ```
 
-### 2. Version Resolution
-Modern Bazel uses Bzlmod for version resolution:
-
+2. **Linking Action**
 ```python
-# MODULE.bazel
-module(
-    name = "my_app",
-    version = "1.0",
-)
-
-bazel_dep(name = "rules_python", version = "0.24.0")
-
-# Override a transitive dependency version
-single_version_override(
-    module_name = "rules_java",
-    version = "5.5.0",
-    patches = ["@//patches:rules_java.patch"],
-)
-
-# Multiple versions allowed in specific cases
-multiple_version_override(
-    module_name = "protobuf",
-    versions = ["3.19.0", "4.23.0"],
-)
-```
-
-### 3. Dependency Visibility
-Control access to your targets:
-
-```python
-# Internal implementation details
-cc_library(
-    name = "internal",
-    srcs = ["internal.cc"],
-    visibility = ["//visibility:private"],
-)
-
-# Package-private implementation
-cc_library(
-    name = "package_private",
-    srcs = ["pkg_private.cc"],
-    visibility = [":__pkg__"],
-)
-
-# Public API
-cc_library(
-    name = "public_api",
-    srcs = ["public.cc"],
-    deps = [":internal"],
-    visibility = ["//visibility:public"],
-)
-```
-
-## Action Graph
-
-### 1. Graph Structure
-Actions form a directed acyclic graph (DAG):
-
-```python
-# Proto generation action
-genrule(
-    name = "proto_gen",
-    srcs = ["schema.proto"],
-    outs = ["schema.pb.go"],
-    cmd = "$(location @com_google_protobuf//:protoc) " +
-          "$(SRCS) --go_out=$(OUTS)",
-    tools = ["@com_google_protobuf//:protoc"],
-)
-
-# Depends on generated proto
-go_library(
-    name = "lib",
-    srcs = [
-        "lib.go",
-        ":proto_gen",
-    ],
-    importpath = "example.com/myapp/lib",
-)
-
-# Final binary depends on library
-go_binary(
-    name = "app",
-    srcs = ["main.go"],
-    deps = [":lib"],
-)
-```
-
-### 2. Parallel Execution
-Bazel automatically parallelizes independent actions:
-
-```python
+# This cc_binary creates actions to:
 cc_binary(
     name = "app",
     srcs = ["main.cc"],
-    deps = [
-        ":lib1",  # Built independently
-        ":lib2",  # Built independently
-        ":lib3",  # Built independently
-    ],
+    deps = [":lib"],
 )
+# 1. Compile main.cc to main.o
+# 2. Link main.o with lib.a to create app
 ```
 
-### 3. Incremental Builds
-Bazel's incremental build system minimizes unnecessary work:
+3. **Code Generation Action**
+```python
+# This genrule creates an action to:
+genrule(
+    name = "generate",
+    srcs = ["input.txt"],
+    outs = ["output.txt"],
+    cmd = "cat $(SRCS) | tr '[:lower:]' '[:upper:]' > $(OUTS)",
+)
+# Run the specified command to transform input.txt to output.txt
+```
+
+## How Dependencies and Actions Work Together
+
+### Build Process
+
+1. **Loading Phase**
+   - Reads BUILD files
+   - Builds target graph
+   - Validates dependencies
+
+2. **Analysis Phase**
+   - Creates action graph
+   - Determines required actions
+   - Validates action inputs/outputs
+
+3. **Execution Phase**
+   - Runs necessary actions
+   - Caches results
+   - Produces outputs
+
+### Example Build Flow
 
 ```python
+# Given these targets:
 cc_library(
-    name = "lib",
-    srcs = ["lib.cc"],     # Change triggers recompile
-    hdrs = ["lib.h"],      # Change triggers rebuild of dependents
-    deps = [":base"],      # Change in base's interface triggers rebuild
+    name = "utils",
+    srcs = ["utils.cc"],
+    hdrs = ["utils.h"],
 )
+
+cc_binary(
+    name = "app",
+    srcs = ["app.cc"],
+    deps = [":utils"],
+)
+
+# Bazel will:
+1. Load the BUILD file
+2. Create target graph: app -> utils
+3. Create actions:
+   - Compile utils.cc -> utils.o
+   - Create utils.a
+   - Compile app.cc -> app.o
+   - Link app.o + utils.a -> app
+4. Execute actions in order
 ```
 
 ## Best Practices
 
-1. **Dependency Organization**
-   - Keep dependencies close to where they're used
-   - Use fine-grained targets to minimize rebuild scope
-   - Prefer direct dependencies over transitive ones
+### Dependency Management
 
-2. **Version Management**
-   - Use explicit versions in `MODULE.bazel`
-   - Document version constraints and compatibility
-   - Regularly update dependencies for security fixes
+1. **Keep Dependencies Minimal**
+   ```python
+   # Good: Direct dependency
+   cc_binary(
+       name = "app",
+       deps = [":needed_lib"],  # We directly use this
+   )
 
-3. **Action Optimization**
-   - Minimize action inputs to improve caching
-   - Use appropriate granularity for targets
-   - Leverage platform-specific configurations
+   # Bad: Unnecessary dependency
+   cc_binary(
+       name = "app",
+       deps = [
+           ":needed_lib",
+           ":unused_lib",  # We don't use this
+       ],
+   )
+   ```
 
-4. **Cache Efficiency**
-   - Use hermetic toolchains
-   - Avoid timestamps and non-deterministic outputs
-   - Keep build environments consistent
+2. **Use Fine-grained Targets**
+   ```python
+   # Good: Separate libraries
+   cc_library(name = "auth")
+   cc_library(name = "db")
+   cc_library(
+       name = "server",
+       deps = [":auth", ":db"],
+   )
 
-## Key Takeaways
+   # Bad: Monolithic library
+   cc_library(
+       name = "everything",
+       srcs = glob(["*.cc"]),
+   )
+   ```
 
-1. **Dependency Management**
-   - Use explicit dependencies
-   - Minimize dependency scope
-   - Version pin for stability
+3. **Proper Dependency Types**
+   ```python
+   cc_binary(
+       name = "app",
+       deps = [":lib"],         # Build dependency
+       data = ["config.json"],  # Runtime dependency
+   )
+   ```
 
-2. **Action System**
-   - Actions are hermetic
-   - Parallel execution when possible
-   - Caching based on inputs
+### Action Efficiency
 
-3. **Best Practices**
-   - Group related dependencies
-   - Optimize action inputs
-   - Use version management
+1. **Minimize Action Inputs**
+   ```python
+   # Good: Specific inputs
+   genrule(
+       name = "gen",
+       srcs = ["needed.txt"],
+       outs = ["out.txt"],
+   )
+
+   # Bad: Too many inputs
+   genrule(
+       name = "gen",
+       srcs = glob(["*.txt"]),  # Unnecessary files trigger rebuilds
+       outs = ["out.txt"],
+   )
+   ```
+
+2. **Use Appropriate Tools**
+   ```python
+   # Good: Use built-in rules when possible
+   cc_binary(
+       name = "app",
+       srcs = ["app.cc"],
+   )
+
+   # Avoid: Custom genrule for standard operations
+   genrule(
+       name = "app",
+       srcs = ["app.cc"],
+       outs = ["app"],
+       cmd = "gcc $(SRCS) -o $(OUTS)",
+   )
+   ```
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Missing Dependencies**
+   ```bash
+   ERROR: 'boost/filesystem.hpp' file not found
+   ```
+   - Check if dependency is in `deps`
+   - Verify dependency's `visibility`
+   - Check if headers are in `hdrs`
+
+2. **Action Failures**
+   ```bash
+   ERROR: action 'Compiling lib.cc' failed
+   ```
+   - Check action inputs exist
+   - Verify command is correct
+   - Look for missing tools
+
+3. **Circular Dependencies**
+   ```bash
+   ERROR: cycle in dependency graph
+   ```
+   - Identify the cycle
+   - Refactor dependencies
+   - Consider creating a common dependency
+
+## Related Documentation
+
+- [Labels and Targets](labels-and-targets.md)
+- [Build vs Runtime](build-vs-runtime.md)
+- [Official Bazel Dependencies Documentation](https://bazel.build/concepts/dependencies)
+- [Official Bazel Actions Documentation](https://bazel.build/rules/concepts#actions)
 
 ## Next Steps
 
-- Learn about [Build vs Runtime](/concepts/build-vs-runtime)
-- Understand [Remote Execution](/concepts/remote-execution)
-- Explore [Rules and Evaluation](/concepts/rules-and-evaluation)
+- Learn about [Build vs Runtime](build-vs-runtime.md) to understand different dependency phases
+- Explore [Remote Execution](remote-execution.md) to see how actions can be distributed
+- Study [Rules and Evaluation](rules-and-evaluation.md) to create custom rules and actions
+- Read about [Unified Environment](unified-environment.md) to understand how Bazel ensures reproducible actions

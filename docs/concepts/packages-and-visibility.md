@@ -1,206 +1,232 @@
-# Packages and Visibility in Modern Bazel
+# Packages and Visibility
 
-Packages in Bazel are collections of related files and their associated build rules. Visibility rules control how these packages can be used by other parts of your build. Understanding both is crucial for creating maintainable builds.
+This guide explains how Bazel organizes code into packages and controls access between them. If you're familiar with programming concepts, packages are similar to modules in Python or packages in Java, while visibility rules are like access modifiers (public, private, etc.).
 
-## Package Concepts
+## Understanding Packages
 
 ### What is a Package?
-- A directory containing a BUILD.bazel file
-- All files in that directory (unless claimed by a subpackage)
-- Build rules that create targets
-- Visibility declarations that control access
 
-### Package Naming
-- Follows directory structure from workspace root
-- Uses forward slashes (/) even on Windows
-- Cannot cross repository boundaries
-- Must be unique within a repository
+A package is a collection of related files and the rules for building them. Every package:
+- Has exactly one BUILD file (either `BUILD` or `BUILD.bazel`)
+- Contains source files and build rules
+- Has its own namespace for targets
+- Controls what other packages can use its targets
 
-## Package Structure
-
-### Basic Layout
+Example package structure:
 ```
-my_project/
-├── MODULE.bazel           # Module definition
-├── BUILD.bazel           # Root package
-├── .bazelrc             # Bazel configuration
-└── src/
-    ├── BUILD.bazel      # Source package
-    ├── lib/
-    │   └── BUILD.bazel  # Library package
-    └── test/
-        └── BUILD.bazel  # Test package
+src/main/server/
+├── BUILD.bazel        # Defines the package
+├── server.cc          # Source files
+├── server.h
+├── auth/             # Subpackage
+│   ├── BUILD.bazel
+│   ├── auth.cc
+│   └── auth.h
+└── db/              # Subpackage
+    ├── BUILD.bazel
+    ├── db.cc
+    └── db.h
 ```
 
-## Visibility Rules
+### Package Names
 
-### Default Visibility
+Package names are derived from their directory path:
 ```python
-# In BUILD.bazel
-package(
-    default_visibility = ["//visibility:private"],  # Most restrictive
+//src/main/server        # Main server package
+//src/main/server/auth   # Auth subpackage
+//src/main/server/db     # Database subpackage
+```
+
+## Understanding Visibility
+
+### What is Visibility?
+
+Visibility controls which packages can use your targets. It's like access control in programming:
+- `private` → visible only within the package
+- `public` → visible to everyone
+- Custom visibility → visible to specific packages
+
+### Setting Visibility
+
+```python
+# Make a target private (default)
+cc_library(
+    name = "internal_lib",
+    srcs = ["internal.cc"],
+    # No visibility = private to package
 )
 
-# Or
-package(
-    default_visibility = ["//visibility:public"],   # Least restrictive
+# Make a target public
+cc_library(
+    name = "public_lib",
+    srcs = ["public.cc"],
+    visibility = ["//visibility:public"],
 )
-```
 
-### Target-specific Visibility
-```python
-py_library(
-    name = "lib",
-    srcs = ["lib.py"],
-    # Only visible to specific packages
+# Make a target visible to specific packages
+cc_library(
+    name = "auth_lib",
+    srcs = ["auth.cc"],
     visibility = [
-        "//my/package:__pkg__",          # This package only
-        "//my/package:__subpackages__",  # This package and subpackages
-        "@other_module//some/pkg:__pkg__",  # Package in another module
+        "//src/main/server:__pkg__",        # Just this package
+        "//src/main/server:__subpackages__", # This package and below
+        "//src/test/server:__pkg__",        # Test package
     ],
 )
 ```
 
 ### Package Groups
+
+For complex visibility patterns, use package groups:
+
 ```python
 # Define a group of packages
 package_group(
-    name = "internal_pkgs",
+    name = "server_packages",
     packages = [
-        "//src/...",          # All packages under src
-        "//test/integration",  # Specific package
+        "//src/main/server/...",  # All server packages
+        "//src/test/server/...",  # All server test packages
     ],
 )
 
+# Use the package group
 cc_library(
-    name = "internal_lib",
-    visibility = [":internal_pkgs"],
+    name = "server_lib",
+    srcs = ["server.cc"],
+    visibility = [":server_packages"],
 )
 ```
 
-## Common Patterns
+## Package Organization
 
-### 1. API Boundaries
+### Best Practices
+
+1. **Package Granularity**
+   - Keep packages focused and cohesive
+   - One package per major component
+   - Split large packages into subpackages
+
+2. **Package Hierarchy**
+   ```
+   src/                      # Source root
+   ├── main/                 # Main code
+   │   ├── server/          # Server component
+   │   ├── client/          # Client component
+   │   └── common/          # Shared code
+   └── test/                # Tests
+       ├── server/
+       ├── client/
+       └── common/
+   ```
+
+3. **Visibility Design**
+   - Start private by default
+   - Make public only what's necessary
+   - Use package groups for complex patterns
+   - Document visibility decisions
+
+### Common Patterns
+
+#### Component-based Organization
 ```python
-# Private implementation
+# //src/main/server/BUILD.bazel
 cc_library(
-    name = "internal",
-    srcs = ["internal.cc"],
-    visibility = ["//visibility:private"],
+    name = "server_lib",
+    srcs = ["server.cc"],
+    visibility = ["//src/main:__subpackages__"],
 )
 
-# Public API
+# //src/main/client/BUILD.bazel
 cc_library(
-    name = "public_api",
-    srcs = ["api.cc"],
-    deps = [":internal"],
-    visibility = ["//visibility:public"],
+    name = "client_lib",
+    srcs = ["client.cc"],
+    deps = ["//src/main/server:server_lib"],
 )
 ```
 
-### 2. Test Access
+#### Test Access
 ```python
+# //src/main/server/BUILD.bazel
 cc_library(
-    name = "testonly_lib",
-    testonly = True,  # Can only be used by tests
-    visibility = ["//javatests:__subpackages__"],
-)
-
-cc_test(
-    name = "lib_test",
-    srcs = ["lib_test.cc"],
-    deps = [":testonly_lib"],
+    name = "server_lib",
+    srcs = ["server.cc"],
+    testonly = True,  # Only tests can depend on this
+    visibility = ["//src/test/server:__pkg__"],
 )
 ```
 
-### 3. Module Boundaries
+## Dependencies Between Packages
+
+### Direct Dependencies
+
 ```python
-# In src/lib/BUILD.bazel
-cc_library(
-    name = "lib",
-    visibility = [
-        "//src:__subpackages__",  # Visible within our module
-        "@other_module//authorized/path:__pkg__",  # Specific external access
+cc_binary(
+    name = "server",
+    srcs = ["server.cc"],
+    deps = [
+        "//src/main/server/auth:auth_lib",  # Must be visible
+        "//src/main/server/db:db_lib",      # Must be visible
     ],
 )
 ```
 
-## Best Practices
+### Transitive Dependencies
 
-### 1. Package Organization
 ```python
-# Good: Logical grouping with clear boundaries
-//src/
-    auth/           # Authentication package
-        BUILD.bazel
-        auth.py
-        session.py
-    api/            # API package
-        BUILD.bazel
-        handlers.py
-    models/         # Data models
-        BUILD.bazel
-        user.py
-
-# Avoid: Too fine-grained or too coarse
-//src/everything/  # Too coarse
-//src/auth/impl/session/manager/  # Too fine-grained
-```
-
-### 2. Visibility Control
-- Start with private visibility by default
-- Explicitly declare public APIs
-- Use package groups for related access
-- Document visibility decisions
-
-### 3. Test Structure
-```python
-# Source package
-//src/lib/
-    BUILD.bazel
-    lib.py
-
-# Test package (parallel structure)
-//src/lib/tests/
-    BUILD.bazel
-    lib_test.py
-```
-
-## Common Issues
-
-### 1. Visibility Problems
-```python
-# Error: Target '@other_module//lib:utils' is not visible
-deps = ["@other_module//lib:utils"]  # Missing visibility
-
-# Fix: Add visibility in @other_module//lib:BUILD.bazel
+# //src/main/server/auth/BUILD.bazel
 cc_library(
-    name = "utils",
-    visibility = ["//visibility:public"],  # Or more specific
+    name = "auth_lib",
+    srcs = ["auth.cc"],
+    deps = ["//src/main/server/db:db_lib"],  # Auth depends on DB
+    visibility = ["//src/main/server:__pkg__"],
+)
+
+# //src/main/server/BUILD.bazel
+cc_binary(
+    name = "server",
+    srcs = ["server.cc"],
+    deps = ["//src/main/server/auth:auth_lib"],  # Server gets DB through Auth
 )
 ```
 
-### 2. Package Boundary Violations
-```python
-# Error: File not in package
-srcs = ["../util/helper.py"]  # Crosses package boundary
+## Troubleshooting
 
-# Fix: Create a dependency
-deps = ["//src/util:helper"]
-```
+### Common Issues
 
-### 3. Circular Dependencies
-```python
-# Avoid circular dependencies between packages
-//src/a:lib_a  ->  //src/b:lib_b  ->  //src/a:lib_a
+1. **Visibility Errors**
+   ```bash
+   ERROR: Target '//src/main/server:internal_lib' is not visible
+   ```
+   - Check the target's visibility settings
+   - Verify package dependencies are necessary
+   - Consider using package groups
 
-# Solution: Restructure or create a common dependency
-//src/common:shared  <-  //src/a:lib_a
-                    <-  //src/b:lib_b
-```
+2. **Circular Dependencies**
+   ```bash
+   ERROR: cycle in dependency graph
+   ```
+   - Identify the dependency cycle
+   - Refactor packages to break the cycle
+   - Consider creating a common dependency
 
-## See Also
+3. **Missing BUILD Files**
+   ```bash
+   ERROR: no such package '//src/main/server'
+   ```
+   - Ensure BUILD file exists
+   - Check file permissions
+   - Verify package path
 
-- [Labels and Targets](/concepts/labels-and-targets)
-- [Dependencies and Actions](/concepts/dependencies-and-actions)
-- [Build vs Runtime](/concepts/build-vs-runtime)
+## Related Documentation
+
+- [Labels and Targets](labels-and-targets.md)
+- [Dependencies and Actions](dependencies-and-actions.md)
+- [Official Bazel Packages Documentation](https://bazel.build/concepts/packages)
+- [Official Bazel Visibility Documentation](https://bazel.build/concepts/visibility)
+
+## Next Steps
+
+- Explore [Dependencies and Actions](dependencies-and-actions.md) to understand how packages interact
+- Learn about [Build Files](../getting-started/build-files.md) to create effective package structures
+- Study [Module Dependencies](../getting-started/module-dependencies.md) for managing external packages
+- Read about [Core Concepts](core-concepts.md) to see how packages fit into the bigger picture

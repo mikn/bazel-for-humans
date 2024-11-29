@@ -15,8 +15,9 @@ export default withMermaid({
       { text: 'Home', link: '/' },
       { text: 'Getting Started', link: '/getting-started/' },
       { text: 'Concepts', link: '/concepts/core-concepts' },
-      { text: 'Best Practices', link: '/best-practices/dependency-management' },
-      { text: 'Examples', link: '/examples/basic-build' },
+      { text: 'Trade-offs & Decisions', link: '/trade-offs/choosing-bazel' },
+      { text: 'Best Practices', link: '/best-practices/project-structure' },
+      { text: 'Examples', link: '/examples/go-microservice' },
     ],
 
     sidebar: {
@@ -25,9 +26,13 @@ export default withMermaid({
           text: 'Getting Started',
           items: [
             { text: 'Introduction', link: '/getting-started/' },
+            { text: 'Workspaces', link: '/getting-started/workspaces' },
+            { text: 'BUILD Files', link: '/getting-started/build-files' },
+            { text: 'Running Builds', link: '/getting-started/running-builds' },
             { text: 'Dependencies', link: '/getting-started/dependencies' },
-            { text: 'Build Files', link: '/getting-started/build-files' },
-            { text: 'Workspaces', link: '/getting-started/workspaces' }
+            { text: 'Build Rules', link: '/getting-started/build-rules' },
+            { text: 'Testing', link: '/getting-started/testing' },
+            { text: 'Module Dependencies', link: '/getting-started/module-dependencies' }
           ]
         }
       ],
@@ -35,13 +40,35 @@ export default withMermaid({
         {
           text: 'Core Concepts',
           items: [
-            { text: 'Modern Bazel Overview', link: '/concepts/core-concepts' },
-            { text: 'Build vs Runtime', link: '/concepts/build-vs-runtime' },
+            { text: 'Overview', link: '/concepts/core-concepts' },
+            { text: 'Hermetic Environment', link: '/concepts/hermetic-environment' },
+            { text: 'Labels and Targets', link: '/concepts/labels-and-targets' },
+            { text: 'Packages and Visibility', link: '/concepts/packages-and-visibility' },
             { text: 'Dependencies and Actions', link: '/concepts/dependencies-and-actions' },
-            { text: 'Unified Environment', link: '/concepts/unified-environment' },
-            { text: 'Bazel Central Registry', link: '/concepts/bazel-central-registry' },
             { text: 'Remote Repositories', link: '/concepts/remote-repositories' },
-            { text: 'Version Resolution', link: '/concepts/version-resolution' }
+            { text: 'Bazel Central Registry', link: '/concepts/bazel-central-registry' },
+            { text: 'Build vs Runtime', link: '/concepts/build-vs-runtime' },
+            { text: 'Rules and Evaluation', link: '/concepts/rules-and-evaluation' }
+          ]
+        },
+        {
+          text: 'Advanced Concepts',
+          items: [
+            { text: 'Configuration and Toolchains', link: '/concepts/configuration-and-toolchains' },
+            { text: 'Providers and Aspects', link: '/concepts/providers-and-aspects' },
+            { text: 'Remote Execution', link: '/concepts/remote-execution' }
+          ]
+        }
+      ],
+      '/trade-offs/': [
+        {
+          text: 'Trade-offs & Decisions',
+          items: [
+            { text: 'Choosing Bazel', link: '/trade-offs/choosing-bazel' },
+            { text: 'Native vs Bazel Toolchains', link: '/trade-offs/native-vs-bazel-toolchains' },
+            { text: 'Language Ecosystems', link: '/trade-offs/language-ecosystems' },
+            { text: 'Build Tools Integration', link: '/trade-offs/build-tools-integration' },
+            { text: 'Migration Considerations', link: '/trade-offs/migration-considerations' }
           ]
         }
       ],
@@ -49,8 +76,9 @@ export default withMermaid({
         {
           text: 'Best Practices',
           items: [
-            { text: 'Dependency Management', link: '/best-practices/dependency-management' },
-            { text: 'Build Performance', link: '/best-practices/build-performance' },
+            { text: 'Project Structure', link: '/best-practices/project-structure' },
+            { text: 'Testing and CI', link: '/best-practices/testing-and-ci' },
+            { text: 'Toolchains', link: '/best-practices/toolchains' }
           ]
         }
       ],
@@ -58,9 +86,11 @@ export default withMermaid({
         {
           text: 'Examples',
           items: [
-            { text: 'Basic Build', link: '/examples/basic-build' },
-            { text: 'Multi-language Project', link: '/examples/multi-language' },
-            { text: 'External Dependencies', link: '/examples/external-dependencies' },
+            { text: 'Go Microservice', link: '/examples/go-microservice' },
+            { text: 'Rust Binary', link: '/examples/rust-binary' },
+            { text: 'Container Images', link: '/examples/container-images' },
+            { text: 'Cross Platform Builds', link: '/examples/cross-platform' },
+            { text: 'Multi-language Project', link: '/examples/multi-language' }
           ]
         }
       ]
@@ -76,7 +106,7 @@ export default withMermaid({
 
     footer: {
       message: 'Released under the MIT License.',
-      copyright: 'Copyright 2023-present'
+      copyright: 'Copyright 2024-present'
     }
   },
 
@@ -87,13 +117,13 @@ export default withMermaid({
       dark: 'github-dark'
     },
     languages: [
-      'bash',
-      'python',
-      'javascript',
-      'typescript',
-      'json',
-      'go',
-      'protobuf'
+      { id: 'bash', scopeName: 'source.shell', path: 'bash.tmLanguage.json' },
+      { id: 'python', scopeName: 'source.python', path: 'python.tmLanguage.json' },
+      { id: 'javascript', scopeName: 'source.js', path: 'javascript.tmLanguage.json' },
+      { id: 'typescript', scopeName: 'source.ts', path: 'typescript.tmLanguage.json' },
+      { id: 'json', scopeName: 'source.json', path: 'json.tmLanguage.json' },
+      { id: 'go', scopeName: 'source.go', path: 'go.tmLanguage.json' },
+      { id: 'protobuf', scopeName: 'source.protobuf', path: 'protobuf.tmLanguage.json' }
     ]
   },
 

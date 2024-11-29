@@ -1,135 +1,96 @@
-# Build vs Runtime in Modern Bazel
+# Build vs Runtime
 
-Understanding the distinction between build time and runtime is crucial for creating correct and efficient Bazel builds. This guide explains the key differences and best practices for handling both phases.
+This guide explains the important distinction between build-time and runtime in Bazel. Understanding this difference is crucial for correctly structuring your build and avoiding common pitfalls.
 
-## Core Concepts
+## Key Concepts
 
 ### Build Time vs Runtime
 
-#### Build Time
-Build time refers to when Bazel executes your build:
-- Bazel evaluates and executes actions
-- Source files are compiled and linked
-- Dependencies are resolved and validated
-- Generated files are created
-- Tests are executed
-- Resource files are copied to their destinations
+1. **Build Time**
+   - When Bazel executes your build rules
+   - When source files are compiled
+   - When dependencies are linked
+   - When resources are processed
 
-#### Runtime
-Runtime occurs when the built artifacts are actually executed:
-- Programs are launched and executed
-- Files and resources are accessed from their runtime locations
-- Dynamic dependencies are resolved
-- Environment variables are read
-- Configuration is loaded
-- Network connections are established
+2. **Runtime**
+   - When your compiled program actually runs
+   - When configuration files are read
+   - When resources are loaded
+   - When dynamic libraries are loaded
 
-::: tip
-Understanding this distinction is crucial for proper dependency management and file access patterns.
-:::
+## Dependencies
 
-## Common Patterns
+### Build Dependencies vs Runtime Dependencies
 
-### 1. File Access
-
-#### Build Time Access
 ```python
-# BUILD.bazel
 cc_binary(
-    name = "app",
-    srcs = ["main.cc"],
-    data = ["config/settings.json"],  # Build-time declaration
-)
-
-# main.cc
-#include <fstream>
-#include <string>
-#include "tools/cpp/runfiles/runfiles.h"
-
-int main(int argc, char** argv) {
-    // Correct runtime access using runfiles
-    std::string error;
-    auto runfiles = bazel::tools::cpp::runfiles::Runfiles::Create(argv[0], &error);
-    if (runfiles == nullptr) {
-        std::cerr << "Failed to load runfiles: " << error << std::endl;
-        return 1;
-    }
-    
-    std::string path = runfiles->Rlocation("myapp/config/settings.json");
-    std::ifstream config(path);
-}
-```
-
-::: warning
-Never use absolute paths or relative paths that depend on the current working directory. Always use runfiles for runtime file access.
-:::
-
-### 2. Dependencies
-
-#### Build Dependencies
-```python
-# MODULE.bazel
-module(
-    name = "myapp",
-    version = "1.0",
-)
-
-bazel_dep(name = "rules_go", version = "0.41.0")
-bazel_dep(name = "protobuf", version = "3.19.0")
-
-# BUILD.bazel
-go_library(
-    name = "lib",
-    srcs = ["lib.go"],
-    deps = [
-        "@com_github_golang_protobuf//proto",  # Build dependency
-        "//proto:myservice_go_proto",          # Generated code dependency
-    ],
-)
-```
-
-#### Runtime Dependencies
-```python
-# BUILD.bazel
-py_binary(
     name = "server",
-    srcs = ["server.py"],
-    deps = [
-        requirement("flask"),      # Build-time Python package dependency
-    ],
-    data = [
-        "templates/**/*.html",     # Runtime template files
-        "//static:assets",         # Runtime static assets
-        "//config:settings.yaml",  # Runtime configuration
-    ],
+    srcs = ["server.cc"],           # Build-time: needed for compilation
+    deps = [":server_lib"],         # Build-time: needed for linking
+    data = ["config.json"],         # Runtime: needed when program runs
 )
-
-# server.py
-import os
-from rules_python.python.runfiles import runfiles
-
-def main():
-    r = runfiles.Create()
-    
-    # Correct runtime path resolution
-    template_dir = r.Rlocation("myapp/templates")
-    config_path = r.Rlocation("myapp/config/settings.yaml")
-    
-    app = Flask(__name__,
-                template_folder=template_dir,
-                static_folder=r.Rlocation("myapp/static"))
 ```
 
-### 3. Configuration
+### Understanding the Difference
 
-#### Build Configuration
+1. **Build Dependencies (`deps`)**
+   - Must be available during compilation
+   - Are linked into the binary
+   - Affect the build graph
+   ```python
+   cc_library(
+       name = "server_lib",
+       srcs = ["server_lib.cc"],
+       hdrs = ["server_lib.h"],     # Used at build time
+       deps = ["@boost//:asio"],    # Linked at build time
+   )
+   ```
+
+2. **Runtime Dependencies (`data`)**
+   - Must be available when program runs
+   - Are not linked into the binary
+   - Are packaged with the binary
+   ```python
+   py_binary(
+       name = "app",
+       srcs = ["app.py"],
+       data = [
+           "templates/",            # Used at runtime
+           "//config:settings.json", # Used at runtime
+       ],
+   )
+   ```
+
+## Build-Time Considerations
+
+### 1. Build Environment
+
+The build environment is controlled by Bazel:
 ```python
-# .bazelrc
-build --cpu=x86_64
-build --compilation_mode=opt
-build --stamp  # Include build timestamp
+# Build environment settings
+build --incompatible_strict_action_env  # Hermetic build environment
+build --workspace_status_command="./status.sh"  # Build-time info
+```
 
-# BUILD.bazel
+### 2. Build-Time Variables
+
+```python
+# Stamp variables available at build time
+genrule(
+    name = "version_info",
+    outs = ["version.txt"],
+    cmd = """
+        echo "Build time: $${BUILD_TIMESTAMP}" > $(OUTS)
+        echo "Git commit: $${STABLE_GIT_COMMIT}" >> $(OUTS)
+    """,
+    stamp = 1,  # Enable build stamping
+)
+```
+
+### 3. Build-Time Configuration
+
+```python
+# Config settings affect build time behavior
 config_setting(
     name = "opt_build",
     values = {"compilation_mode": "opt"},
@@ -137,198 +98,178 @@ config_setting(
 
 cc_binary(
     name = "app",
-    srcs = ["main.cc"],
-    copts = select({
-        ":opt_build": [
-            "-O2",
-            "-DNDEBUG",
-        ],
-        "//conditions:default": [
-            "-O0",
-            "-g",
-        ],
-    }),
+    srcs = ["app.cc"],
     defines = select({
-        ":opt_build": ["PRODUCTION=1"],
-        "//conditions:default": ["DEVELOPMENT=1"],
+        ":opt_build": ["NDEBUG"],
+        "//conditions:default": [],
     }),
 )
 ```
 
-#### Runtime Configuration
+## Runtime Considerations
+
+### 1. Runtime Environment
+
+The runtime environment is where your program executes:
 ```python
-# BUILD.bazel
-go_binary(
+# Runtime data must be explicitly declared
+py_binary(
     name = "server",
-    srcs = ["main.go"],
+    srcs = ["server.py"],
     data = [
-        "config/prod.yaml",
-        "config/dev.yaml",
+        "//config:prod.json",     # Production config
+        "//config:dev.json",      # Development config
     ],
 )
-
-# main.go
-package main
-
-import (
-    "os"
-    "path/filepath"
-    
-    "github.com/bazelbuild/rules_go/go/tools/bazel"
-)
-
-func main() {
-    // Runtime environment-based config selection
-    env := os.Getenv("ENV")
-    configFile := "dev.yaml"
-    if env == "prod" {
-        configFile = "prod.yaml"
-    }
-    
-    // Use runfiles for reliable path resolution
-    runfiles, err := bazel.RunfilesPath()
-    if err != nil {
-        log.Fatal(err)
-    }
-    
-    configPath := filepath.Join(runfiles, "myapp/config", configFile)
-    config, err := loadConfig(configPath)
-}
 ```
 
-## Common Issues and Solutions
+### 2. Runtime Configuration
 
-### 1. Path Resolution
-
-#### Build Time Paths
 ```python
-# BUILD.bazel
-py_binary(
+# Runtime configuration through environment variables
+sh_binary(
     name = "app",
-    srcs = ["app.py"],
-    data = ["data/input.txt"],
+    srcs = ["app.sh"],
+    env = {
+        "APP_CONFIG": "$(location :config.json)",
+        "APP_MODE": "production",
+    },
+    data = [":config.json"],
 )
-
-# app.py
-from rules_python.python.runfiles import runfiles
-
-def read_data():
-    r = runfiles.Create()
-    
-    # Correct: Use runfiles for path resolution
-    data_path = r.Rlocation("myapp/data/input.txt")
-    with open(data_path) as f:
-        return f.read()
-        
-    # Wrong: Hard-coded paths
-    # with open("data/input.txt") as f:  # Will fail
-    # with open("/absolute/path/input.txt") as f:  # Will fail
 ```
 
-### 2. Environment Variables
+### 3. Runtime Dependencies
 
-#### Build Time Environment
 ```python
-# .bazelrc
-build --action_env=COMPILER_PATH=/usr/local/bin
-build --action_env=INCLUDE_PATH=/usr/include
+# Dynamic runtime dependencies
+java_binary(
+    name = "app",
+    srcs = ["App.java"],
+    resources = [
+        "//resources:strings",     # Loaded at runtime
+        "//resources:images",      # Loaded at runtime
+    ],
+    data = [
+        "//config:plugins",        # Loaded dynamically
+        "@jvm_runtime//:libs",     # Runtime JVM libraries
+    ],
+)
+```
 
-# BUILD.bazel
+## Common Patterns
+
+### 1. Configuration Files
+
+```python
+# Build-time configuration
 genrule(
-    name = "generate",
-    srcs = ["input.txt"],
-    outs = ["output.txt"],
-    cmd = "$(COMPILER_PATH)/tool $(INCLUDE_PATH) $(SRCS) > $(OUTS)",
-    env = {
-        "LANG": "en_US.UTF-8",
-        "PATH": "/bin:/usr/bin",
-    },
+    name = "build_config",
+    srcs = ["config.template"],
+    outs = ["config.h"],
+    cmd = "$(location //tools:config_gen) $(SRCS) > $(OUTS)",
+    tools = ["//tools:config_gen"],
+)
+
+# Runtime configuration
+cc_binary(
+    name = "app",
+    srcs = ["app.cc"],
+    data = ["config.json"],  # Read at runtime
 )
 ```
 
-#### Runtime Environment
+### 2. Resource Handling
+
 ```python
-# BUILD.bazel
-go_binary(
-    name = "server",
-    srcs = ["main.go"],
-    env = {
-        "APP_NAME": "myapp",
-    },
+# Build-time resource processing
+genrule(
+    name = "process_resources",
+    srcs = glob(["resources/*.txt"]),
+    outs = ["processed_resources.dat"],
+    cmd = "$(location //tools:resource_compiler) $(SRCS) > $(OUTS)",
+    tools = ["//tools:resource_compiler"],
 )
 
-# main.go
-package main
+# Runtime resource loading
+cc_binary(
+    name = "app",
+    srcs = ["app.cc"],
+    data = [":processed_resources.dat"],
+)
+```
 
-import (
-    "os"
-    "strconv"
+### 3. Plugin Systems
+
+```python
+# Build-time plugin compilation
+cc_library(
+    name = "plugin_lib",
+    srcs = ["plugin.cc"],
+    hdrs = ["plugin.h"],
 )
 
-func main() {
-    // Runtime environment configuration with defaults
-    debug, _ := strconv.ParseBool(os.Getenv("DEBUG", "false"))
-    port, _ := strconv.Atoi(os.Getenv("PORT", "8080"))
-    env := os.Getenv("ENV", "development")
-    
-    // Use environment-specific settings
-    config := loadConfig(env)
-    startServer(config, port)
-}
+# Runtime plugin loading
+cc_binary(
+    name = "app",
+    srcs = ["app.cc"],
+    deps = [":plugin_interface"],
+    data = [":plugin_lib"],  # Loaded dynamically at runtime
+)
 ```
 
 ## Best Practices
 
-### 1. File Access
-- Always use runfiles for runtime file access
-- Never use absolute paths
-- Avoid relative paths that depend on current working directory
-- Package all required runtime files in the `data` attribute
-- Use platform-independent path manipulation
+1. **Dependency Declaration**
+   - Use `deps` for build-time dependencies
+   - Use `data` for runtime dependencies
+   - Be explicit about what's needed when
 
-### 2. Dependencies
-- Declare all direct dependencies explicitly
-- Use fine-grained targets to minimize rebuilds
-- Separate runtime data from build dependencies
-- Version all external dependencies
-- Use dependency injection for better testing
+2. **Configuration Management**
+   - Keep build configuration in BUILD files
+   - Keep runtime configuration in data files
+   - Use appropriate config for each phase
 
-### 3. Configuration
-- Use build configurations for compile-time options
-- Use runtime configuration for dynamic settings
-- Follow the principle of least privilege
-- Make configuration explicit and documented
-- Provide sensible defaults
+3. **Resource Handling**
+   - Process resources at build time when possible
+   - Package runtime resources appropriately
+   - Consider resource loading performance
 
-### 4. Environment
-- Declare build-time environment requirements
-- Document required runtime environment variables
-- Provide defaults for optional settings
-- Use hermetic toolchains
-- Keep development and production environments similar
+## Common Issues
 
-## Common Mistakes to Avoid
+### 1. Missing Runtime Dependencies
+```bash
+ERROR: cannot find file 'config.json'
+```
+- Add file to `data` attribute
+- Ensure file is in correct location
+- Check runtime path resolution
 
-1. **Path Resolution**
-   - Using absolute paths
-   - Relying on current working directory
-   - Hardcoding path separators
-   - Not using runfiles
+### 2. Build/Runtime Environment Mismatch
+```bash
+ERROR: binary requires library 'libxyz.so'
+```
+- Ensure runtime environment has necessary libraries
+- Consider bundling runtime dependencies
+- Use appropriate toolchain configuration
 
-2. **Dependencies**
-   - Missing runtime dependencies
-   - Undeclared build dependencies
-   - Circular dependencies
-   - Not versioning external dependencies
+### 3. Configuration Timing
+```bash
+ERROR: undefined symbol 'CONFIG_VALUE'
+```
+- Move build-time config to BUILD files
+- Move runtime config to data files
+- Use appropriate configuration mechanism
 
-3. **Configuration**
-   - Mixing build and runtime configuration
-   - Hardcoding environment-specific values
-   - Not providing defaults
-   - Unsafe configuration loading
+## Related Documentation
 
-4. **Environment**
-   - Undeclared environment dependencies
-   - Assuming environment variables exist
-   - Not handling missing variables
-   - Using different environments for build and runtime
+- [Dependencies and Actions](dependencies-and-actions.md)
+- [Unified Environment](unified-environment.md)
+- [Official Bazel Dependencies Documentation](https://bazel.build/concepts/dependencies)
+- [Official Bazel Runtime Documentation](https://bazel.build/extending/rules#runfiles)
+
+## Next Steps
+
+- Learn about [Unified Environment](unified-environment.md) to understand how Bazel manages build and runtime environments
+- Explore [Remote Execution](remote-execution.md) to see how build and runtime environments are handled in distributed builds
+- Study [Dependencies and Actions](dependencies-and-actions.md) to better understand the build process
+- Read about [Toolchain Resolution](https://bazel.build/concepts/toolchains) to learn how Bazel manages build tools

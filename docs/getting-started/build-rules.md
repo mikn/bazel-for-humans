@@ -1,207 +1,221 @@
 # Build Rules
 
-This guide explains how to use build rules in modern Bazel to define your build targets.
+This guide explains how to use build rules in Bazel to define your build targets.
 
 ## Understanding Build Rules
 
 Build rules define how Bazel should build different types of targets. Each rule specifies:
 - Input files and dependencies
-- Build commands and tools
+- Commands and tools to execute
 - Output files and artifacts
+- Configuration and platform settings
 
-## Common Rules
+## Rule Types
 
-### Python Rules
+### Core Rules
 
-Basic Python binary:
+These are built into Bazel:
+
 ```python
+# Basic file operations
+filegroup(name = "assets", srcs = ["data.txt"])
+genrule(name = "gen", outs = ["out.txt"], cmd = "...")
+
+# Shell scripts
+sh_binary(name = "script", srcs = ["script.sh"])
+sh_test(name = "test", srcs = ["test.sh"])
+```
+
+### Language-Specific Rules
+
+Rules for different programming languages:
+
+```python
+# C/C++
+cc_binary(
+    name = "app",
+    srcs = ["main.cc"],
+    deps = [":lib"],
+)
+
+# Java
+java_library(
+    name = "lib",
+    srcs = glob(["src/main/java/**/*.java"]),
+    deps = ["@maven//:com_google_guava_guava"],
+)
+
+# Python
 py_binary(
     name = "app",
     srcs = ["main.py"],
     deps = [":lib"],
+    python_version = "PY3",
 )
-```
 
-Python library:
-```python
-py_library(
-    name = "lib",
-    srcs = ["lib.py"],
-    deps = ["//common:utils"],
-)
-```
-
-Python test:
-```python
-py_test(
-    name = "lib_test",
-    srcs = ["lib_test.py"],
-    deps = [":lib"],
-)
-```
-
-### Go Rules
-
-Go binary:
-```python
-go_binary(
-    name = "server",
-    srcs = ["main.go"],
-    deps = [":handlers"],
-)
-```
-
-Go library:
-```python
-go_library(
-    name = "handlers",
-    srcs = ["handlers.go"],
-    importpath = "example.com/myapp/handlers",
-)
-```
-
-### Generic Rules
-
-File groups:
-```python
-filegroup(
-    name = "configs",
-    srcs = glob(["*.json"]),
-)
-```
-
-Shell scripts:
-```python
-sh_binary(
-    name = "script",
-    srcs = ["script.sh"],
-    data = [":configs"],
+# Protocol Buffers
+proto_library(
+    name = "proto",
+    srcs = ["data.proto"],
 )
 ```
 
 ## Rule Attributes
 
-Common attributes used in rules:
+### Common Attributes
 
-### Basic Attributes
-
+Most rules support these attributes:
 ```python
-py_library(
-    name = "lib",              # Target name
-    srcs = ["lib.py"],         # Source files
-    deps = ["//common:utils"],  # Dependencies
+cc_library(
+    name = "lib",                    # Required: Target name
+    srcs = ["lib.cc"],              # Source files
+    deps = ["//common:utils"],       # Build dependencies
+    data = ["//data:config"],       # Runtime dependencies
     visibility = ["//visibility:public"],  # Access control
+    tags = ["no-remote"],           # Special properties
 )
 ```
 
-### Advanced Attributes
+### Platform-Specific Attributes
 
+Configure for different platforms:
 ```python
-py_binary(
+cc_binary(
     name = "app",
-    srcs = ["main.py"],
-    deps = [":lib"],
-    main = "main.py",          # Entry point
-    data = ["//data:config"],  # Runtime data
-    args = ["--debug"],        # Default arguments
+    srcs = ["app.cc"],
+    deps = select({
+        "//config:linux": [":linux_lib"],
+        "//config:darwin": [":darwin_lib"],
+        "//conditions:default": [":default_lib"],
+    }),
+    target_compatible_with = [
+        "@platforms//os:linux",
+    ],
 )
 ```
 
-## Custom Rules
+## Starlark Rules
 
-Define custom rules in `.bzl` files:
+### Writing Custom Rules
 
+Define in `.bzl` files:
 ```python
-# rules/python.bzl
-def custom_py_binary(name, deps = None, **kwargs):
-    """A custom Python binary rule with predefined settings."""
-    py_binary(
-        name = name,
-        deps = deps + ["//common:base"],
-        python_version = "PY3",
-        **kwargs
+# my_rules.bzl
+def _impl(ctx):
+    output = ctx.actions.declare_file(ctx.label.name + ".out")
+    ctx.actions.run(
+        outputs = [output],
+        inputs = ctx.files.srcs,
+        executable = ctx.executable._tool,
+        arguments = [output.path] + [f.path for f in ctx.files.srcs],
     )
+    return [DefaultInfo(files = depset([output]))]
+
+my_rule = rule(
+    implementation = _impl,
+    attrs = {
+        "srcs": attr.label_list(allow_files = True),
+        "_tool": attr.label(
+            default = "//tools:processor",
+            executable = True,
+            cfg = "exec",
+        ),
+    },
+)
 ```
 
-Use custom rules:
-```python
-load("//rules:python.bzl", "custom_py_binary")
+### Using Custom Rules
 
-custom_py_binary(
-    name = "app",
-    srcs = ["main.py"],
+```python
+load("//rules:my_rules.bzl", "my_rule")
+
+my_rule(
+    name = "custom",
+    srcs = ["input.txt"],
 )
 ```
 
 ## Best Practices
 
-1. **Rule Selection**
+1. **Rule Design**
    - Use built-in rules when possible
-   - Keep custom rules simple
-   - Document rule behavior
+   - Keep custom rules focused and reusable
+   - Document rule behavior and requirements
+   - Follow the single responsibility principle
 
-2. **Dependencies**
-   - Declare minimal dependencies
+2. **Attribute Configuration**
+   - Make attributes clear and well-documented
+   - Use appropriate attribute types
+   - Provide sensible defaults
+   - Validate attribute values
+
+3. **Dependencies**
+   - Keep dependency graphs shallow
    - Use fine-grained targets
    - Avoid circular dependencies
-
-3. **Visibility**
-   - Restrict visibility appropriately
-   - Use package groups
-   - Document public APIs
+   - Properly declare indirect dependencies
 
 4. **Testing**
-   - Write test rules
-   - Use test suites
-   - Mock dependencies
+   - Write rule unit tests
+   - Test with different platforms
+   - Verify output correctness
+   - Test error conditions
 
 ## Common Patterns
 
-### Multi-language Projects
+### Test Rules
 
-Combining different rules:
 ```python
-py_library(
-    name = "py_lib",
-    srcs = ["lib.py"],
-)
-
-go_library(
-    name = "go_lib",
-    srcs = ["lib.go"],
-)
-
-cc_binary(
-    name = "app",
-    srcs = ["main.cc"],
+cc_test(
+    name = "lib_test",
+    srcs = ["lib_test.cc"],
     deps = [
-        ":py_lib",
-        ":go_lib",
+        ":lib",
+        "@com_google_googletest//:gtest_main",
     ],
+    size = "small",
 )
 ```
 
-### Resource Handling
+### Multi-output Rules
 
-Managing data files:
 ```python
-filegroup(
-    name = "assets",
-    srcs = glob([
-        "static/**/*.css",
-        "static/**/*.js",
-    ]),
-)
-
-py_binary(
-    name = "server",
-    srcs = ["server.py"],
-    data = [":assets"],
+genrule(
+    name = "generate",
+    srcs = ["input.txt"],
+    outs = [
+        "output1.txt",
+        "output2.txt",
+    ],
+    cmd = "$(location //tools:generator) $(SRCS) $(OUTS)",
+    tools = ["//tools:generator"],
 )
 ```
 
-## Next Steps
+### Macro Rules
 
-1. Learn about [Module Dependencies](/getting-started/module-dependencies)
-2. Explore [Core Concepts](/concepts/core-concepts)
-3. Practice with [Multi-language Projects](/examples/multi-language)
+```python
+def cc_test_suite(name, srcs, deps = None):
+    """Create a test suite from multiple source files."""
+    tests = []
+    for src in srcs:
+        test_name = "%s_%s" % (name, src.replace(".cc", ""))
+        cc_test(
+            name = test_name,
+            srcs = [src],
+            deps = deps,
+        )
+        tests.append(test_name)
+    
+    native.test_suite(
+        name = name,
+        tests = tests,
+    )
+```
+
+## Related Documentation
+
+- [Rules](https://bazel.build/rules)
+- [Starlark Language](https://bazel.build/rules/language)
+- [Writing Rules](https://bazel.build/rules/rules)
+- [Testing Rules](https://bazel.build/rules/testing)

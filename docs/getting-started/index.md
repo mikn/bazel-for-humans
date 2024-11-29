@@ -99,83 +99,51 @@ Bazel solves these problems with a unified approach:
 
 ## Getting Started
 
-Now that we understand why Bazel is valuable, let's set it up.
+### Installing Bazel with Bazelisk
 
-### Prerequisites
+The recommended way to install and manage Bazel is through Bazelisk, a version manager that automatically downloads and runs the correct version of Bazel for your project.
 
+Prerequisites:
 - A supported operating system (Linux, macOS, or Windows)
-- Python 3.7 or later (for Python examples)
-- Git (recommended)
+- One of:
+  - npm (recommended)
+  - Go
+  - Homebrew (macOS)
+  - Chocolatey (Windows)
 
-## Installation
-
-Install Bazel on your system:
-
-::: code-group
-```bash [Linux]
-# For Ubuntu/Debian
-sudo apt install curl gnupg
-curl -fsSL https://bazel.build/bazel-release.pub.gpg | gpg --dearmor > bazel.gpg
-sudo mv bazel.gpg /etc/apt/trusted.gpg.d/
-echo "deb [arch=amd64] https://storage.googleapis.com/bazel-apt stable jdk1.8" | sudo tee /etc/apt/sources.list.d/bazel.list
-sudo apt update && sudo apt install bazel
-
-# Verify installation
-bazel --version
-```
-
-```bash [macOS]
-# Using Homebrew
-brew install bazel
-
-# Verify installation
-bazel --version
-```
-
-```powershell [Windows]
-# Using Chocolatey
-choco install bazel
-
-# Verify installation
-bazel --version
-```
-:::
-
-Configure Bazel:
+Install Bazelisk using your preferred package manager:
 ```bash
-# Create user-wide Bazel configuration
-touch ~/.bazelrc
+# Using npm (recommended)
+npm install -g @bazel/bazelisk
 
-# Enable Bzlmod (required for Bazel 6.x, default in 7.x)
-echo 'common --enable_bzlmod' >> ~/.bazelrc
+# Or using Go
+go install github.com/bazelbuild/bazelisk@latest
 ```
 
-## Creating a New Project
+Bazelisk will:
+- Download the correct version of Bazel based on your project's `.bazelversion` file
+- Keep your Bazel installation up to date
+- Switch between different versions for different projects
 
-Create a new directory for your project:
+### Create Your First Project
 
+1. Create a new directory and initialize it:
 ```bash
-mkdir my-project
-cd my-project
+mkdir my-project && cd my-project
+echo "7.4.0" > .bazelversion  # Pin Bazel version
 ```
 
-### Initialize Your Module
-
-Create a `MODULE.bazel` file:
-
+2. Create `MODULE.bazel`:
 ```python
 module(
     name = "my_project",
     version = "0.1.0",
 )
 
-# Use a recent version from BCR
 bazel_dep(name = "rules_python", version = "0.27.1")
 ```
 
-### Create Your First Build Target
-
-Create a simple Python application:
+3. Create a simple Python application:
 
 ::: code-group
 ```python [main.py]
@@ -192,38 +160,13 @@ load("@rules_python//python:defs.bzl", "py_binary")
 py_binary(
     name = "hello",
     srcs = ["main.py"],
-    # Public visibility is often not needed
-    # Consider restricting to specific packages
-    visibility = ["//visibility:public"],
 )
 ```
 :::
 
-Let's examine each component:
-
-- `MODULE.bazel`: Defines your project and its dependencies
-  - `name`: Your module's name (lowercase with underscores)
-  - `version`: Your module's version (optional for local development)
-  - `bazel_dep`: Dependencies from the Bazel Central Registry
-
-- `BUILD.bazel`: Defines build targets
-  - `load`: Imports rule definitions
-  - `py_binary`: Rule for building Python executables
-  - `visibility`: Access control for the target
-
-## Building and Running
-
-Build and run your application:
-
+4. Build and run:
 ```bash
-# Build the target
-bazel build //:hello
-
-# Run the binary
 bazel run //:hello
-
-# Clean build artifacts
-bazel clean
 ```
 
 ## Project Structure
@@ -232,8 +175,8 @@ A typical Bazel project structure:
 
 ```
 my_project/
-├── MODULE.bazel          # Module and dependency definitions
-├── .bazelrc             # Project-specific Bazel settings (optional)
+├── .bazelversion        # Pinned Bazel version
+├── MODULE.bazel         # Module and dependency definitions
 ├── BUILD.bazel          # Build targets for the root package
 ├── main.py             # Source code
 └── src/                # Additional source directories
@@ -258,6 +201,5 @@ my_project/
    - Run `bazel clean` if you suspect cache issues
 
 3. **Module Not Found**
-   - Ensure `--enable_bzlmod` is set
    - Verify dependency versions exist in BCR
    - Check for typos in module names

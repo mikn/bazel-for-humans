@@ -267,8 +267,16 @@ def _merge_providers(ctx):
    - Design for performance
    - Handle errors gracefully
 
+## Related Documentation
+
+- [Rules and Evaluation](rules-and-evaluation.md)
+- [Dependencies and Actions](dependencies-and-actions.md)
+- [Official Bazel Providers Documentation](https://bazel.build/extending/rules#providers)
+- [Official Bazel Aspects Documentation](https://bazel.build/extending/aspects)
+
 ## Next Steps
 
-- Learn about [Rules and Evaluation](/concepts/rules-and-evaluation)
-- Explore [Remote Execution](/concepts/remote-execution)
-- Understand [Build Performance](/best-practices/build-performance)
+- Learn about [Rules and Evaluation](rules-and-evaluation.md) to understand how providers and aspects fit into rule implementation
+- Explore [Dependencies and Actions](dependencies-and-actions.md) to see how providers help share information between targets
+- Study [Build Rules](../getting-started/build-rules.md) to see providers and aspects in action
+- Read about [Toolchains](https://bazel.build/extending/toolchains) to understand how providers help with tool configuration

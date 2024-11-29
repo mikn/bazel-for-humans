@@ -348,9 +348,16 @@ Consider using the `--experimental_enable_bzlmod` flag during migration to test 
 Always maintain a rollback plan when making significant changes to your dependency management system.
 :::
 
+## Related Documentation
+
+- [Module Dependencies](../getting-started/module-dependencies.md)
+- [Dependencies](../getting-started/dependencies.md)
+- [Official BCR Documentation](https://bazel.build/external/registry)
+- [Official Bzlmod Documentation](https://bazel.build/external/module)
+
 ## Next Steps
 
-1. Explore the [BCR GitHub repository](https://github.com/bazelbuild/bazel-central-registry)
-2. Review [Bzlmod documentation](/getting-started/)
-3. Learn about [Remote Repositories](/concepts/remote-repositories)
-4. Understand [Version Resolution](/concepts/version-resolution)
+- Learn about [Module Dependencies](../getting-started/module-dependencies.md) to understand how to use BCR modules effectively
+- Explore [Dependencies](../getting-started/dependencies.md) to see how BCR fits into dependency management
+- Study [Build Rules](../getting-started/build-rules.md) to create your own modules
+- Read about [Workspaces](../getting-started/workspaces.md) to understand the transition from WORKSPACE to Bzlmod

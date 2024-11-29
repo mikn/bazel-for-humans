@@ -1,188 +1,191 @@
-# Understanding Labels and Targets in Modern Bazel
+# Labels and Targets
 
-Labels in Bazel are references that uniquely identify build targets. In modern Bazel with Bzlmod, labels follow a consistent pattern that reflects the module-based architecture.
+This guide explains how Bazel identifies and builds different parts of your code. If you're familiar with programming but new to build systems, think of labels as "addresses" and targets as "things that can be built".
 
-## Label Structure
+## Understanding Labels
 
-### Basic Format
+### What is a Label?
+
+A label is like a URL for your code - it uniquely identifies any buildable thing in your workspace. Just like a web URL has a specific format, labels follow this pattern:
+
 ```python
-@module//path/to/package:target
-^      ^                ^
-|      |                └── Target name (optional, defaults to package name)
-|      └── Package path from module root
-└── Module name (optional for local module)
+@repository//package/path:target_name
 ```
 
-### Module References
+Breaking this down:
+- `@repository`: Which codebase this is in (optional, defaults to your main code)
+- `//package/path`: Where in the codebase to look
+- `:target_name`: What specific thing to build
 
-#### 1. Local Module References
+### Label Examples
+
 ```python
-# Reference within your module
-//my/package:target     # Explicit target
-//my/package           # Package default target
-:target               # Target in current package
+# Building something in your main codebase
+//my/cool/project:app                # Build the 'app' target
+//my/cool/project                    # Use the default target
+:app                                # Target in current package
+
+# Building from external code
+@rules_python//python:defs.bzl      # Python rules from external repo
+@com_github_google//lib:utils       # Library from GitHub
 ```
 
-#### 2. External Module References
+## Understanding Targets
+
+### What is a Target?
+
+A target is anything that can be built. Think of it like this:
+- A binary target is like your final executable
+- A library target is like a reusable component
+- A test target is your test suite
+- A file target is just a file or group of files
+
+### Common Target Types
+
 ```python
-# Reference to external module
-@rules_python//python:defs.bzl
-@rules_go//go:def.bzl
+# A program you can run
+cc_binary(
+    name = "my_app",
+    srcs = ["main.cc"],
+)
+
+# A library others can use
+cc_library(
+    name = "utils",
+    srcs = ["utils.cc"],
+    hdrs = ["utils.h"],
+)
+
+# Tests for your code
+cc_test(
+    name = "utils_test",
+    srcs = ["utils_test.cc"],
+    deps = [":utils"],
+)
 ```
 
-## Target Types
+## How Labels and Targets Work Together
 
-### 1. Build Rule Targets
+### Building Things
+
+When you run a Bazel command, you use labels to specify what to build:
+
+```bash
+# Build a specific target
+bazel build //my/project:app
+
+# Build everything in a package
+bazel build //my/project/...
+
+# Run a binary
+bazel run //my/project:app
+
+# Run tests
+bazel test //my/project:all_tests
+```
+
+### Dependencies Between Targets
+
+Targets can depend on other targets using labels:
+
 ```python
-# In BUILD.bazel
-load("@rules_python//python:defs.bzl", "py_binary")
-
-py_binary(
+cc_binary(
     name = "app",
-    srcs = ["main.py"],
-)
-
-# Referenced as //my/package:app
-```
-
-### 2. File Targets
-```python
-# Source files
-//my/package:main.py
-//my/package/main.py    # Both forms are equivalent
-
-# Generated files
-//my/package:protos/message_pb2.py
-```
-
-### 3. Package Groups
-```python
-# In BUILD.bazel
-package_group(
-    name = "internal",
-    packages = [
-        "//my/package/...",    # All packages under my/package
-    ],
-)
-```
-
-## Label Resolution
-
-### Same Package References
-```python
-# In //my/app/BUILD.bazel
-py_library(
-    name = "lib",
-    srcs = ["lib.py"],
+    srcs = ["app.cc"],
     deps = [
-        ":utils",           # Same package
-        "//common:base",    # Different package
-        "@pytest//:lib",    # External module
-    ],
-)
-```
-
-### Cross-Package References
-```python
-# Must use full package path
-py_binary(
-    name = "app",
-    deps = [
-        "//my/app/util:lib",    # Local module
-        "@rules_python//python/pip_install:requirements.bzl",  # External
-    ],
-)
-```
-
-## Common Patterns
-
-### 1. Source Organization
-```python
-# Preferred: Clear package boundaries
-//src/server:main.py
-//src/server/auth:handler.py
-//src/server/db:models.py
-
-# Avoid: Deeply nested packages
-//src/com/example/myapp/server/internal/auth:handler.py
-```
-
-### 2. Test References
-```python
-py_test(
-    name = "lib_test",
-    srcs = ["lib_test.py"],
-    deps = [
-        ":lib",                    # Target under test
-        "@pytest//:pytest",        # Test framework
-        "//testing/utils:mock",    # Test utilities
-    ],
-)
-```
-
-### 3. Data Dependencies
-```python
-go_binary(
-    name = "server",
-    srcs = ["main.go"],
-    data = [
-        "config.json",            # Data file in same package
-        "//configs:prod.json",    # Data from another package
+        ":utils",                          # Local dependency
+        "//common/math:geometry",          # From another package
+        "@boost//:filesystem",             # From external repository
     ],
 )
 ```
 
 ## Best Practices
 
-### 1. Label Clarity
+1. **Label Naming**
+   - Use descriptive, lowercase names
+   - Use underscores to separate words
+   - Keep names concise but clear
+
+2. **Target Organization**
+   - Group related targets in the same package
+   - Split large targets into smaller, reusable pieces
+   - Use clear naming patterns (e.g., `*_test` for tests)
+
+3. **Dependencies**
+   - Depend on the most specific target needed
+   - Avoid unnecessary dependencies
+   - Keep dependency chains short
+
+## Common Patterns
+
+### Library and Binary
 ```python
-# Good: Explicit and clear
-deps = ["//third_party/protobuf:lib"]
-deps = ["@rules_go//go:def.bzl"]
-
-# Avoid: Ambiguous or implicit
-deps = ["protobuf"]
-deps = ["//external/rules_go/go:def.bzl"]  # Use @rules_go instead
-```
-
-### 2. Package Organization
-- Keep related targets in the same package
-- Use meaningful package names
-- Avoid deep package hierarchies
-- Group tests with their targets
-
-### 3. Visibility
-```python
-py_library(
-    name = "internal_lib",
-    visibility = ["//my/package:__subpackages__"],  # Visible to subpackages
+cc_library(
+    name = "greeting",
+    srcs = ["greeting.cc"],
+    hdrs = ["greeting.h"],
 )
 
-py_library(
-    name = "public_lib",
-    visibility = ["//visibility:public"],  # Visible to all
+cc_binary(
+    name = "hello_world",
+    srcs = ["main.cc"],
+    deps = [":greeting"],
 )
 ```
 
-## Common Issues
+### Tests and Test Data
+```python
+cc_test(
+    name = "greeting_test",
+    srcs = ["greeting_test.cc"],
+    deps = [":greeting"],
+    data = ["test_data.txt"],
+)
+```
 
-1. **Label Resolution Failures**
-   - Check package paths are correct
-   - Verify target exists in specified package
-   - Ensure proper visibility settings
+### File Groups
+```python
+filegroup(
+    name = "configs",
+    srcs = glob(["config/*.json"]),
+)
+```
 
-2. **Module References**
-   - Use `@module` prefix for external dependencies
-   - Verify module is declared in MODULE.bazel
-   - Check for version compatibility
+## Troubleshooting
 
-3. **Path Issues**
-   - Use forward slashes (/) even on Windows
-   - Package paths are relative to module root
-   - File paths are relative to BUILD.bazel location
+### Common Issues
 
-## See Also
+1. **Label Not Found**
+   ```bash
+   ERROR: no such package '//my/project'
+   ```
+   - Check if the package path is correct
+   - Ensure BUILD file exists in that directory
 
-- [Packages and Visibility](/concepts/packages-and-visibility)
-- [Dependencies and Actions](/concepts/dependencies-and-actions)
-- [Bazel Central Registry](/concepts/bazel-central-registry)
+2. **Target Not Found**
+   ```bash
+   ERROR: no such target '//my/project:app'
+   ```
+   - Check if target name matches BUILD file
+   - Look for typos in the label
+
+3. **Visibility Error**
+   ```bash
+   ERROR: Target '//my/project:lib' is not visible
+   ```
+   - Check if the target's visibility allows access
+   - Add necessary visibility declarations
+
+## Related Documentation
+
+- [Packages and Visibility](packages-and-visibility.md)
+- [Dependencies and Actions](dependencies-and-actions.md)
+- [Official Bazel Labels Documentation](https://bazel.build/concepts/labels)
+
+## Next Steps
+
+- Learn about [Packages and Visibility](packages-and-visibility.md) to understand how to control access to your targets
+- Explore [Dependencies and Actions](dependencies-and-actions.md) to see how targets are built
+- Study [Build Rules](../getting-started/build-rules.md) to create your own targets
+- Read about [Workspaces](../getting-started/workspaces.md) to manage external dependencies

@@ -307,8 +307,16 @@ ctx.actions.run_shell(
    - Document attributes
    - Test rule behavior
 
+## Related Documentation
+
+- [Providers and Aspects](providers-and-aspects.md)
+- [Dependencies and Actions](dependencies-and-actions.md)
+- [Official Bazel Rules Documentation](https://bazel.build/extending/rules)
+- [Official Bazel Starlark Documentation](https://bazel.build/rules/language)
+
 ## Next Steps
 
-- Learn about [Remote Execution](/concepts/remote-execution)
-- Explore [Build Performance](/best-practices/build-performance)
-- Practice with [Multi-language Projects](/examples/multi-language)
+- Learn about [Providers and Aspects](providers-and-aspects.md) to create more sophisticated rules
+- Explore [Dependencies and Actions](dependencies-and-actions.md) to understand how rules create the build graph
+- Study [Build Rules](../getting-started/build-rules.md) to see common rule patterns
+- Read about [Toolchains](https://bazel.build/extending/toolchains) to understand how rules interact with tools
